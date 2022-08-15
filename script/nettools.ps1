@@ -30,10 +30,6 @@ Invoke-WebRequest -Uri "https://npcap.com/dist/npcap-1.70.exe" -OutFile "$env:wi
 # Add one-time installer to next login
 New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" -Name '!nettools_2_npcap' -PropertyType String -Value "$env:windir\temp\npcap-setup.exe" -Force
 
-# Add instructions for interactive install
-$scriptBlock = "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show('Install nmap first, then install npcap', 'NetTools Install Instructions','OK','Information') "
-New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" -Name '!nettools_0_instructions' -PropertyType String -Value "powershell.exe -Command `"$scriptBlock`"" -Force
-
 # Enable IIS for testing HTTP/TCP
 Install-WindowsFeature -name Web-Server -IncludeManagementTools
 hostname > "C:\inetpub\wwwroot\index.html"
