@@ -1,5 +1,7 @@
 # Installing networking tools on Azure VMs
 
+Forked from Daniel Mauser's sample scripts at https://github.com/dmauser/azure-vm-net-tools
+
 #### In this article
 
 [Concepts](#Concepts)
@@ -16,15 +18,15 @@ On this post we will demonstrate how to deploy useful network utilities/tools on
 
 It is important to note all procedures below have been tested on Linux Ubuntu 18.04. You may need to make changes depending on your Linux distro.
 
-Please review the list of network tools installed inside the content of the [script](https://raw.githubusercontent.com/dmauser/azure-vm-net-tools/main/script/nettools.sh). You can also define your own startup script and replace the script URL on the variable **nettoolsuri** listed in the examples below.
+Please review the list of network tools installed inside the content of the [script](https://raw.githubusercontent.com/davmhelm/azure-vm-net-tools/main/script/nettools.sh). You can also define your own startup script and replace the script URL on the variable **nettoolsuri** listed in the examples below.
 
 ### Requirements
 
 - [Azure Cloud Shell](https://shell.azure.com/)
-- Ubuntu Linux or WLS using Azure CLI (curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash). More info [Install the Azure CLI on Linux](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt).
+- Ubuntu Linux or WSL using Azure CLI (curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash). More info [Install the Azure CLI on Linux](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt).
 - VMs require Internet access to be able to download the tools.
 
-**Note:**: an Azure Shell script [lxvm-nettools.azcli](https://raw.githubusercontent.com/dmauser/azure-vm-net-tools/main/lxvm-nettools.azcli) with the scenarios below are also included in this repo.
+**Note:**: an Azure Shell script [lxvm-nettools.azcli](https://raw.githubusercontent.com/davmhelm/azure-vm-net-tools/main/lxvm-nettools.azcli) with the scenarios below are also included in this repo.
 
 ### Scenario 1: Deploy a new Azure Linux VM with Network Tools using CLI
 
@@ -35,7 +37,7 @@ location=southcentralus # Define your location
 vnetname=AzureVNET # Azure VNET name
 vmname=AzVM1 # Azure VM Name
 username=azureadmin
-nettoolsuri="https://raw.githubusercontent.com/dmauser/azure-vm-net-tools/main/script/nettools.sh"
+nettoolsuri="https://raw.githubusercontent.com/davmhelm/azure-vm-net-tools/main/script/nettools.sh"
 
 # Create VNET/Subnet
 az group create --name $rg --location $location
@@ -44,7 +46,7 @@ az network vnet create --resource-group $rg --name $vnetname --location $locatio
 --subnet-name subnet1 \
 --subnet-prefix 10.0.0.0/24
 
-# Create VM using
+# Create VM using variables above
 az network public-ip create --name $vmname-pip --resource-group $rg --location $location --sku Basic --allocation-method Dynamic
 az network nic create --resource-group $rg -n $vmname-nic --location $location \
 --subnet subnet1 \
@@ -79,10 +81,10 @@ Install network utilities on all Linux VMs inside a resource group.
 ```Bash
 # Define variables
 rg=RSLAB-EUS2-AZFW ## Define your resource group
-nettoolsuri="https://raw.githubusercontent.com/dmauser/azure-vm-net-tools/main/script/nettools.sh"
+nettoolsuri="https://raw.githubusercontent.com/davmhelm/azure-vm-net-tools/main/script/nettools.sh"
 
 # Loop below will list all your Linux VMs and install the network utilities on them.
-for vm in `az vm list -g $rg --query "[?storageProfile.osDisk.osType=='Linux'].name" -o tsv`
+for vm in $(az vm list -g $rg --query "[?storageProfile.osDisk.osType=='Linux'].name" -o tsv)
 do
  az vm extension set \
  --resource-group $rg \
@@ -94,4 +96,79 @@ do
 done
 ```
 
-## Windows (coming soon)
+## Windows
+
+Please review the list of network tools installed inside the content of the [script](https://raw.githubusercontent.com/davmhelm/azure-vm-net-tools/main/script/nettools.ps1). You can also define your own startup script and replace the script URL on the variable **nettoolsuri** listed in the examples below.
+
+### Requirements
+- [Azure Cloud Shell](https://shell.azure.com/)
+- Ubuntu Linux or WSL using Azure CLI (curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash). More info [Install the Azure CLI on Linux](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt).
+- Windows shell with Azure CLI installed. more info here: [Install the Azure CLI on Windows](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-windows?tabs=azure-cli)
+- VMs require Internet access to be able to download the tools.
+
+**Note:**: an Azure Shell script [winvm-nettools.azcli](https://raw.githubusercontent.com/davmhelm/azure-vm-net-tools/main/winvm-nettools.azcli) with the scenarios below are also included in this repo.
+
+### Scenario 1: Deploy a new Azure Windows VM with Network Tools using CLI
+
+```bash
+# Define variables
+rg=LAB-NetTools ## Define your resource group
+location=southcentralus # Define your location
+vnetname=AzureVNET # Azure VNET name
+vmname=AzVM1 # Azure VM Name
+username=azureadmin
+nettoolsuri="https://raw.githubusercontent.com/davmhelm/azure-vm-net-tools/main/script/nettools.ps1"
+
+# Create VNET/Subnet
+az group create --name $rg --location $location
+az network vnet create --resource-group $rg --name $vnetname --location $location \
+--address-prefixes 10.0.0.0/24 \
+--subnet-name subnet1 \
+--subnet-prefix 10.0.0.0/24
+
+# Create VM using variables above
+az network public-ip create --name $vmname-pip --resource-group $rg --location $location --sku Basic --allocation-method Dynamic
+az network nic create --resource-group $rg -n $vmname-nic --location $location \
+--subnet subnet1 \
+--vnet-name $vnetname \
+--public-ip-address $vmname-pip
+az vm create -n $vmname --resource-group $rg --size Standard_B1s --image Win2022Datacenter \
+--admin-username $username \
+--nics $vmname-nic
+
+## Run Extension Script
+az vm extension set \
+--resource-group $rg \
+--vm-name $vmname \
+--name customScriptExtension \
+--publisher Microsoft.Compute \
+--settings "{\"fileUris\": [\"$nettoolsuri\"],\"commandToExecute\": \"powershell.exe -File ./nettools.ps1\"}" \
+--no-wait
+
+## Obtain Public IP and RDP to the target machine.
+pip=$(az network public-ip show --name $vmname-pip --resource-group $rg --query ipAddress -o tsv)
+echo -e "RDP to the VM and test the tools are present (traceroute and others), run this on a Windows computer"
+echo -e "mstsc /v:$pip"
+# 1) Install remaining tools, nmap and npcap
+# 2) 'Run Invoke-webrequest localhost' and you should see your VM name.
+```
+
+### Scenario 2: Install network utilities on your existing Windows VMs
+
+```bash
+# Define variables
+rg=RSLAB-EUS2-AZFW ## Define your resource group
+nettoolsuri="https://raw.githubusercontent.com/davmhelm/azure-vm-net-tools/main/script/nettools.ps1"
+
+# Loop below will list all your Linux VMs and install the network utilities on them.
+for vm in $(az vm list -g $rg --query "[?storageProfile.osDisk.osType=='Windows'].name" -o tsv)
+do
+ az vm extension set \
+ --resource-group $rg \
+ --vm-name $vm \
+ --name customScriptExtension \
+ --publisher Microsoft.Compute \
+ --settings "{\"fileUris\": [\"$nettoolsuri\"],\"commandToExecute\": \"powershell.exe -File ./nettools.ps1\"}" \
+ --no-wait
+done
+```
