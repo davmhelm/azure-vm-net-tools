@@ -6,7 +6,7 @@ location=southcentralus # Define your location
 vnetname=AzureVNET # Azure VNET name
 vmname=AzVM1 # Azure VM Name
 username=azureadmin
-nettoolsuri="https://raw.githubusercontent.com/dmauser/azure-vm-net-tools/main/script/nettools.sh"
+nettoolsuri="https://raw.githubusercontent.com/davmhelm/azure-vm-net-tools/main/script/nettools.sh"
 
 # Create VNET/Subnet
 az group create --name $rg --location $location
@@ -15,7 +15,7 @@ az network vnet create --resource-group $rg --name $vnetname --location $locatio
 --subnet-name subnet1 \
 --subnet-prefix 10.0.0.0/24
 
-# Create VM using
+# Create VM using variables above
 az network public-ip create --name $vmname-pip --resource-group $rg --location $location --sku Basic --allocation-method Dynamic
 az network nic create --resource-group $rg -n $vmname-nic --location $location \
 --subnet subnet1 \
@@ -46,10 +46,10 @@ ssh azureadmin@$pip
 ## Scenario 2 - Install network utilities on your existing Linux VMs inside same resource group
 # Define variables
 rg=RSLAB-EUS2-AZFW ## Define your resource group
-nettoolsuri="https://raw.githubusercontent.com/dmauser/azure-vm-net-tools/main/script/nettools.sh"
+nettoolsuri="https://raw.githubusercontent.com/davmhelm/azure-vm-net-tools/main/script/nettools.sh"
 
 # Loop below will list all your Linux VMs and install the network utilities on them.
-for vm in `az vm list -g $rg --query "[?storageProfile.osDisk.osType=='Linux'].name" -o tsv`
+for vm in $(az vm list -g $rg --query "[?storageProfile.osDisk.osType=='Linux'].name" -o tsv)
 do
  az vm extension set \
  --resource-group $rg \
