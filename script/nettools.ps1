@@ -1,13 +1,40 @@
 # "Enabled ICMPv4 Windows Firewall Rule - Allow Ping on target VM
 Set-NetfirewallRule -Name FPS-ICMP4-ERQ-In -Enable True -Profile Any
+
 # Systinternals Psping 
-Start-BitsTransfer -source "https://live.sysinternals.com/psping.exe" -destination "$env:windir\system32\psping.exe"
+Invoke-WebRequest -Uri "https://live.sysinternals.com/psping.exe" -OutFile "$env:windir\system32\psping.exe" -UseBasicParsing
+
 # TCPing
-Start-BitsTransfer -source "https://download.elifulkerson.com/files/tcping/0.39/x64/tcping64.exe" -destination "$env:windir\system32\tcping.exe"
+Invoke-WebRequest -Uri "https://download.elifulkerson.com/files/tcping/0.39/x64/tcping64.exe" -OutFile "$env:windir\system32\tcping.exe" -UseBasicParsing
+
 # Network Monitor using silent install
-Start-BitsTransfer -source https://download.microsoft.com/download/7/1/0/7105C7FF-768E-4472-AFD5-F29108D1E383/NM34_x64.exe -destination "$env:windir\temp"
+Invoke-WebRequest -Uri https://download.microsoft.com/download/7/1/0/7105C7FF-768E-4472-AFD5-F29108D1E383/NM34_x64.exe -OutFile "$env:windir\temp\NM34_x64.exe" -UseBasicParsing
 cmd /c "$env:windir\temp\NM34_x64.exe /q"
-# Wireshark using silent install
 
 # NTTTCP - Reference: https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-bandwidth-testing
-Start-BitsTransfer -source "https://github.com/microsoft/ntttcp/releases/download/v5.35/NTttcp.exe" -destination "$env:windir\system32\NTttcp.exe"
+Invoke-WebRequest -Uri "https://github.com/microsoft/ntttcp/releases/download/v5.35/NTttcp.exe" -Outfile "$env:windir\system32\NTttcp.exe" -UseBasicParsing
+
+# Wireshark using silent install -- requires npcap library, which must be interactively installed per free license terms
+Invoke-WebRequest -Uri "https://www.wireshark.org/wireshark-pad.xml" -OutFile "$env:windir\temp\wireshark-pad.xml" -UseBasicParsing
+$wiresharkpad = [xml](Get-Content -Path "$env:windir\temp\wireshark-pad.xml")
+Invoke-WebRequest -Uri ($wiresharkpad.XML_DIZ_INFO.Web_Info.Download_Urls.Primary_Download_URL) -OutFile "$env:windir\temp\wireshark-latest.exe" -UseBasicParsing
+cmd /c "$env:windir\temp\wireshark-latest.exe /S"
+
+# nmap using RunOnce interactive install
+Invoke-WebRequest -Uri "https://nmap.org/dist/nmap-7.92-setup.exe" -OutFile "$env:windir\temp\nmap-setup.exe" -UseBasicParsing
+# Add one-time installer to next login
+New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" -Name '!nettools_1_nmap' -PropertyType String -Value "$env:windir\temp\nmap-setup.exe" -Force
+
+# npcap using RunOnce interactive install
+Invoke-WebRequest -Uri "https://npcap.com/dist/npcap-1.70.exe" -OutFile "$env:windir\temp\npcap-setup.exe" -UseBasicParsing
+# Add one-time installer to next login
+New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" -Name '!nettools_2_npcap' -PropertyType String -Value "$env:windir\temp\npcap-setup.exe" -Force
+
+# Add instructions for interactive install
+$scriptBlock = "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show('Install nmap first, then install npcap', 'NetTools Install Instructions','OK','Information') "
+New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" -Name '!nettools_0_instructions' -PropertyType String -Value "powershell.exe -Command `"$scriptBlock`"" -Force
+
+# Enable IIS for testing HTTP/TCP
+Install-WindowsFeature -name Web-Server -IncludeManagementTools
+hostname > "C:\inetpub\wwwroot\index.html"
+(Get-ComputerInfo -Property "OsName").OsName >> "C:\inetpub\wwwroot\index.html"

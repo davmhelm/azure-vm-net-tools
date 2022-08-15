@@ -1,0 +1,60 @@
+
+## Scenario 1 - Deploy a Azure Windows VM with Network Tools - CLI
+# Define variables
+rg=LAB-NetTools ## Define your resource group
+location=southcentralus # Define your location
+vnetname=AzureVNET # Azure VNET name
+vmname=AzVM1 # Azure VM Name
+username=azureadmin
+nettoolsuri="https://raw.githubusercontent.com/davmhelm/azure-vm-net-tools/main/script/nettools.ps1"
+
+# Create VNET/Subnet
+az group create --name $rg --location $location
+az network vnet create --resource-group $rg --name $vnetname --location $location \
+--address-prefixes 10.0.0.0/24 \
+--subnet-name subnet1 \
+--subnet-prefix 10.0.0.0/24
+
+# Create VM using variables above
+az network public-ip create --name $vmname-pip --resource-group $rg --location $location --sku Basic --allocation-method Dynamic
+az network nic create --resource-group $rg -n $vmname-nic --location $location \
+--subnet subnet1 \
+--vnet-name $vnetname \
+--public-ip-address $vmname-pip
+az vm create -n $vmname --resource-group $rg --size Standard_B1s --image Win2022Datacenter \
+--admin-username $username \
+--nics $vmname-nic
+
+## Run Extension Script
+az vm extension set \
+--resource-group $rg \
+--vm-name $vmname \
+--name customScriptExtension \
+--publisher Microsoft.Compute \
+--settings "{\"fileUris\": [\"$nettoolsuri\"],\"commandToExecute\": \"powershell.exe -File ./nettools.ps1\"}" \
+--no-wait
+
+## Obtain Public IP and RDP to the target machine.
+pip=$(az network public-ip show --name $vmname-pip --resource-group $rg --query ipAddress -o tsv)
+echo -e "RDP to the VM and test the tools are present (traceroute and others), run this on a Windows computer"
+echo -e "mstsc /v:$pip"
+# 1) Install remaining tools, nmap and npcap
+# 2) 'Run Invoke-webrequest localhost' and you should see your VM name.
+
+
+## Scenario 2 - Install network utilities on your existing Linux VMs inside same resource group
+# Define variables
+rg=RSLAB-EUS2-AZFW ## Define your resource group
+nettoolsuri="https://raw.githubusercontent.com/davmhelm/azure-vm-net-tools/main/script/nettools.ps1"
+
+# Loop below will list all your Linux VMs and install the network utilities on them.
+for vm in $(az vm list -g $rg --query "[?storageProfile.osDisk.osType=='Windows'].name" -o tsv)
+do
+ az vm extension set \
+ --resource-group $rg \
+ --vm-name $vm \
+ --name customScriptExtension \
+ --publisher Microsoft.Compute \
+ --settings "{\"fileUris\": [\"$nettoolsuri\"],\"commandToExecute\": \"powershell.exe -File ./nettools.ps1\"}" \
+ --no-wait
+done
