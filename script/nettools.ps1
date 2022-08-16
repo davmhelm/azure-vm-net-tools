@@ -32,5 +32,5 @@ New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
 
 # Enable IIS for testing HTTP/TCP
 Install-WindowsFeature -name Web-Server -IncludeManagementTools
-hostname > "C:\inetpub\wwwroot\index.html"
-(Get-ComputerInfo -Property "OsName").OsName >> "C:\inetpub\wwwroot\index.html"
+Set-Content -Path "C:\inetpub\wwwroot\index.html" -Value $env:COMPUTERNAME -Encoding utf8
+Add-Content -Path "C:\inetpub\wwwroot\index.html" -Value (Get-ComputerInfo -Property "OsName").OsName -Encoding utf8
