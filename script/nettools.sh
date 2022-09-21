@@ -2,6 +2,9 @@
 # Update repository
 apt update -y && sudo apt upgrade -y 
 
+# Net-tools
+apt-get install net-tools -y
+
 #Traceroute
 apt-get install traceroute -y
 
